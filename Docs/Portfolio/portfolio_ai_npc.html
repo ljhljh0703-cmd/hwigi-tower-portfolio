@@ -388,6 +388,10 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .evidence-card.wide {
+      grid-column: 1 / -1;
+    }
+
     .card,
     .evidence-card,
     .timeline-item,
@@ -428,6 +432,12 @@
       aspect-ratio: 3 / 4;
     }
 
+    .evidence-card.wide img {
+      aspect-ratio: 21 / 9;
+      object-fit: contain;
+      padding: 12px;
+    }
+
     .evidence-caption {
       display: grid;
       gap: 5px;
@@ -447,6 +457,18 @@
 
     .evidence-caption span {
       color: var(--muted);
+    }
+
+    .evidence-note {
+      margin-top: 14px;
+      border: 1px solid rgba(121, 167, 216, 0.3);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      background: rgba(121, 167, 216, 0.08);
+      color: var(--ink-soft);
+      font-size: 14px;
+      font-weight: 760;
+      word-break: keep-all;
     }
 
     .card,
@@ -909,8 +931,8 @@
             <span>SFT 학습 데이터</span>
           </div>
           <div>
-            <strong>100%</strong>
-            <span>최종 한국어 유지율</span>
+            <strong>25/26</strong>
+            <span>26턴 한국어 유지율</span>
           </div>
         </div>
       </aside>
@@ -1001,7 +1023,7 @@
       </div>
       <div class="evidence-grid">
         <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_08_model_selection_table.png" alt="모델 선택 비교표" loading="lazy" />
+          <img src="assets/ai-npc-colab-20260706/model_selection_table.png" alt="후보 모델 비교표" loading="lazy" />
           <figcaption class="evidence-caption">
             <strong>모델 선택 실패 기록</strong>
             <span>HCX-SEED, Qwen2.5, EXAONE을 비교하며 실패 원인을 모델/언어 prior 기준으로 좁혔습니다.</span>
@@ -1138,16 +1160,16 @@
             </div>
             <div class="bar-row">
               <span>EXAONE v7</span>
-              <div class="bar success"><i style="--value: 100%;"></i></div>
-              <span>100%</span>
+              <div class="bar success"><i style="--value: 96%;"></i></div>
+              <span>96%</span>
             </div>
           </div>
-          <p style="margin-top: 14px;">한국어 유지율 기준입니다. 최종 검증은 5세트 26턴 테스트로 정리했습니다.</p>
+          <p style="margin-top: 14px;">최신 Colab 캡처 기준 26턴 스트레스 테스트는 25/26입니다. 별도 20건 eval 표에서는 각 행의 KR%가 100%로 기록됐습니다.</p>
         </article>
       </div>
       <div class="evidence-grid">
         <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_03_loss_curve.png" alt="EXAONE QLoRA 학습 loss curve" loading="lazy" />
+          <img src="assets/ai-npc-colab-20260706/loss_curve_exaone_q_lora.png" alt="EXAONE QLoRA 학습 loss curve" loading="lazy" />
           <figcaption class="evidence-caption">
             <strong>훈련 진행 증거</strong>
             <span>EXAONE 전환 후 QLoRA 학습이 실제로 수렴했는지 확인하기 위한 loss curve입니다.</span>
@@ -1220,57 +1242,62 @@ revision=8e6fc27</div>
         <p class="lead">
           최종 페이지에서 가장 중요한 증거는 "모델을 써봤다"가 아니라, 실패 지표가 실제로 개선되었는지입니다.
           아래 수치는 EXAONE 전환 후 포트폴리오에 공개 가능한 범위로 정리한 검증 결과입니다.
+          원본 데이터와 체크포인트를 공개하지 않고도, 모델 선택·학습·평가 흐름을 이미지 증거로 확인할 수 있게 구성했습니다.
         </p>
       </div>
       <div class="metric-grid">
         <article class="metric-card">
-          <strong>100%</strong>
-          <span>한국어 유지율, 26/26</span>
+          <strong>25/26</strong>
+          <span>26턴 한국어 유지 판정</span>
         </article>
         <article class="metric-card">
-          <strong>100%</strong>
-          <span>BIW 질문 차단</span>
+          <strong>20/20</strong>
+          <span>공개 eval 표 행별 KR% 100%</span>
         </article>
         <article class="metric-card">
-          <strong>85%+</strong>
-          <span>호감도 어조 분리 목표 달성</span>
+          <strong>14</strong>
+          <span>NPC task type 분포</span>
         </article>
         <article class="metric-card">
-          <strong>100%</strong>
-          <span>기억 키워드 반응</span>
+          <strong>16.6</strong>
+          <span>평균 응답 길이</span>
         </article>
         <article class="metric-card">
           <strong>697</strong>
           <span>SFT JSONL 데이터</span>
         </article>
         <article class="metric-card">
-          <strong>2.4B</strong>
-          <span>최종 모델 크기</span>
+          <strong>0.0023</strong>
+          <span>최종 train loss 기록</span>
         </article>
       </div>
       <div class="evidence-grid three">
         <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_04_korean_retention_table.png" alt="한국어 유지율 검증표" loading="lazy" />
+          <img src="assets/ai-npc-colab-20260706/dataset_stats_697.png" alt="Mataios SFT dataset statistics" loading="lazy" />
+          <figcaption class="evidence-caption">
+            <strong>697개 SFT 데이터 분포</strong>
+            <span>mood, memory, combat, shop, ending 등 게임 상황별 task와 호감도 버킷을 나눠 캐릭터 계약을 데이터로 만들었습니다.</span>
+          </figcaption>
+        </figure>
+        <figure class="evidence-card contain wide">
+          <img src="assets/ai-npc-colab-20260706/korean_retention_26turn_table.png" alt="한국어 유지율 26턴 검증표" loading="lazy" />
           <figcaption class="evidence-caption">
             <strong>한국어 유지율 검증</strong>
-            <span>최종 모델이 26턴 검증에서 한국어를 유지했는지 확인한 공개용 표입니다.</span>
+            <span>한 번의 영어 누출을 숨기지 않고 25/26, 96%로 표기했습니다.</span>
           </figcaption>
         </figure>
-        <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_06_eval20_table.png" alt="20문항 평가 결과표" loading="lazy" />
+        <figure class="evidence-card contain wide">
+          <img src="assets/ai-npc-colab-20260706/eval20_masked_table.png" alt="20문항 평가 결과표" loading="lazy" />
           <figcaption class="evidence-caption">
             <strong>평가셋 결과</strong>
-            <span>호감도, 세계관 차단, 기억 반응을 단일 지표가 아니라 테스트셋으로 확인했습니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_10_biw_blocking_result.png" alt="BIW 차단 테스트 결과" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>BIW 차단 증거</strong>
-            <span>게임 세계 밖 질문을 캐릭터 계약에 맞게 거부하는지 확인한 대표 결과입니다.</span>
+            <span>호감도, stage, memory keyword, BIW성 질문을 섞어 캐릭터 응답을 확인했고, 공개 가능한 컬럼만 마스킹해 남겼습니다.</span>
           </figcaption>
         </figure>
       </div>
+      <p class="evidence-note">
+        수치 표기는 공개 캡처와 이전 검증 기록에 맞춰 보수적으로 정리했습니다.
+        이 페이지는 AI NPC 대화 SFT와 Unity 연동 파이프라인 증빙이며, 모바일 온디바이스 배포 완료나 본편 runtime RL 적용을 주장하지 않습니다.
+      </p>
       <div class="grid-2" style="margin-top: 14px;">
         <article class="card">
           <span class="kicker">포트폴리오 가치</span>
