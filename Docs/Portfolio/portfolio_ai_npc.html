@@ -1,1351 +1,227 @@
 <!doctype html>
-<html lang="ko">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>소형 LLM으로 게임 NPC 만들기 | Mataios AI NPC Case Study</title>
-  <meta
-    name="description"
-    content="회귀자는 탑을 오른다의 동행자 마타이오스를 위해 EXAONE 3.5 2.4B, QLoRA, FastAPI, Unity를 연결한 AI NPC 대화 모델 포트폴리오 케이스 스터디."
-  />
-  <meta property="og:title" content="소형 LLM으로 게임 NPC 만들기" />
-  <meta
-    property="og:description"
-    content="Qwen2.5 다국어 누출 실패에서 EXAONE 3.5 2.4B 한국어 NPC 모델까지. 게임 NPC를 위한 소형 LLM 파인튜닝 사례."
-  />
-  <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#090d10" />
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg: #090d10;
-      --bg-2: #101719;
-      --ink: #f6f0e6;
-      --ink-soft: rgba(246, 240, 230, 0.78);
-      --muted: rgba(246, 240, 230, 0.58);
-      --panel: rgba(14, 20, 22, 0.86);
-      --panel-strong: #151f22;
-      --line: rgba(246, 240, 230, 0.15);
-      --red: #d66a58;
-      --amber: #d6ad54;
-      --green: #65c38e;
-      --teal: #5dc9c2;
-      --blue: #79a7d8;
-      --maxw: 1160px;
-      --radius: 8px;
-      --shadow: 0 26px 70px rgba(0, 0, 0, 0.46);
-      font-family: "Apple SD Gothic Neo", "Noto Sans KR", Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-      background: var(--bg);
-    }
-
-    body {
-      margin: 0;
-      color: var(--ink);
-      background:
-        linear-gradient(90deg, rgba(246, 240, 230, 0.025) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(246, 240, 230, 0.025) 1px, transparent 1px),
-        radial-gradient(circle at 12% -10%, rgba(101, 195, 142, 0.18), transparent 360px),
-        radial-gradient(circle at 82% 4%, rgba(214, 106, 88, 0.13), transparent 420px),
-        var(--bg);
-      background-size: 88px 88px, 88px 88px, auto, auto, auto;
-      line-height: 1.58;
-      letter-spacing: 0;
-      overflow-x: hidden;
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    p,
-    h1,
-    h2,
-    h3 {
-      margin: 0;
-    }
-
-    .nav {
-      position: sticky;
-      z-index: 50;
-      top: 0;
-      border-bottom: 1px solid var(--line);
-      background: rgba(9, 13, 16, 0.84);
-      backdrop-filter: blur(14px);
-    }
-
-    .nav-inner {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      width: min(var(--maxw), calc(100% - 32px));
-      margin: 0 auto;
-      padding: 12px 0;
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      min-width: max-content;
-      font-weight: 920;
-    }
-
-    .brand-mark {
-      width: 15px;
-      height: 22px;
-      border: 2px solid var(--green);
-      border-bottom-width: 5px;
-      background: linear-gradient(180deg, rgba(214, 106, 88, 0.95), rgba(214, 106, 88, 0.2));
-      box-shadow: 5px 5px 0 rgba(121, 167, 216, 0.34);
-    }
-
-    .nav-links {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 6px;
-      flex-wrap: wrap;
-      color: var(--ink-soft);
-      font-size: 13px;
-      font-weight: 850;
-    }
-
-    .nav-links a {
-      border: 1px solid transparent;
-      border-radius: 999px;
-      padding: 7px 10px;
-    }
-
-    .nav-links a:hover {
-      border-color: var(--line);
-      background: rgba(246, 240, 230, 0.08);
-      color: var(--ink);
-    }
-
-    .hero {
-      position: relative;
-      overflow: hidden;
-      border-bottom: 1px solid var(--line);
-    }
-
-    .hero::after {
-      content: "";
-      position: absolute;
-      inset: auto 0 0;
-      height: 140px;
-      background: linear-gradient(0deg, var(--bg), transparent);
-      pointer-events: none;
-    }
-
-    .hero-inner {
-      position: relative;
-      z-index: 1;
-      display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(320px, 0.98fr);
-      gap: 34px;
-      align-items: center;
-      width: min(var(--maxw), calc(100% - 32px));
-      min-height: 82svh;
-      margin: 0 auto;
-      padding: 78px 0 72px;
-    }
-
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      color: var(--green);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-
-    .eyebrow::before {
-      content: "";
-      width: 38px;
-      height: 1px;
-      background: currentColor;
-    }
-
-    h1 {
-      max-width: 760px;
-      margin-top: 16px;
-      font-size: 68px;
-      line-height: 0.98;
-      letter-spacing: 0;
-      word-break: keep-all;
-    }
-
-    .subtitle {
-      max-width: 720px;
-      margin-top: 24px;
-      color: rgba(246, 240, 230, 0.9);
-      font-size: 22px;
-      font-weight: 760;
-      line-height: 1.56;
-      word-break: keep-all;
-    }
-
-    .hero-copy {
-      margin-top: 18px;
-      max-width: 720px;
-      color: rgba(246, 240, 230, 0.72);
-      font-size: 15px;
-      font-weight: 720;
-      word-break: keep-all;
-    }
-
-    .actions,
-    .tag-row {
-      display: flex;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-
-    .actions {
-      margin-top: 30px;
-    }
-
-    .tag-row {
-      margin-top: 20px;
-    }
-
-    .button {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      border: 1px solid rgba(246, 240, 230, 0.18);
-      border-radius: var(--radius);
-      padding: 10px 15px;
-      background: rgba(246, 240, 230, 0.09);
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 900;
-    }
-
-    .button.primary {
-      border-color: rgba(101, 195, 142, 0.72);
-      background: linear-gradient(180deg, #77d99d, #2d7856);
-      color: #06100b;
-    }
-
-    .tag {
-      border: 1px solid rgba(246, 240, 230, 0.18);
-      border-radius: 999px;
-      padding: 7px 10px;
-      background: rgba(9, 13, 16, 0.52);
-      color: rgba(246, 240, 230, 0.82);
-      font-size: 12px;
-      font-weight: 850;
-    }
-
-    .hero-panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background:
-        linear-gradient(180deg, rgba(12, 18, 20, 0.94), rgba(7, 10, 12, 0.96)),
-        radial-gradient(circle at 70% 20%, rgba(93, 201, 194, 0.16), transparent 220px);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .placeholder-shot {
-      display: grid;
-      position: relative;
-      overflow: hidden;
-      min-height: 330px;
-      padding: 22px;
-      align-content: end;
-      background:
-        linear-gradient(180deg, rgba(7, 10, 12, 0.1), rgba(7, 10, 12, 0.86)),
-        repeating-linear-gradient(135deg, rgba(246, 240, 230, 0.035) 0 2px, transparent 2px 18px);
-    }
-
-    .hero-character {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      opacity: 0.72;
-      filter: saturate(0.92) contrast(1.05);
-    }
-
-    .dialogue-box {
-      position: relative;
-      z-index: 1;
-      border: 1px solid rgba(246, 240, 230, 0.16);
-      border-radius: var(--radius);
-      padding: 16px;
-      background: rgba(6, 9, 11, 0.84);
-    }
-
-    .dialogue-box b {
-      display: block;
-      color: var(--green);
-      font-size: 13px;
-      margin-bottom: 8px;
-    }
-
-    .dialogue-box p {
-      color: var(--ink-soft);
-      font-size: 15px;
-      word-break: keep-all;
-    }
-
-    .hero-panel-footer {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1px;
-      border-top: 1px solid var(--line);
-      background: var(--line);
-    }
-
-    .hero-panel-footer div {
-      padding: 16px;
-      background: rgba(14, 20, 22, 0.96);
-    }
-
-    .hero-panel-footer strong {
-      display: block;
-      color: var(--green);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 20px;
-    }
-
-    .hero-panel-footer span {
-      display: block;
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 760;
-      word-break: keep-all;
-    }
-
-    .section {
-      width: min(var(--maxw), calc(100% - 32px));
-      margin: 0 auto;
-      padding: 70px 0;
-    }
-
-    .section-head {
-      display: grid;
-      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-      gap: 32px;
-      align-items: end;
-      margin-bottom: 28px;
-    }
-
-    h2 {
-      font-size: 42px;
-      line-height: 1.12;
-      word-break: keep-all;
-    }
-
-    .lead {
-      color: var(--ink-soft);
-      font-size: 17px;
-      word-break: keep-all;
-    }
-
-    .grid-2,
-    .grid-3,
-    .metric-grid {
-      display: grid;
-      gap: 14px;
-    }
-
-    .grid-2 {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .grid-3,
-    .metric-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .evidence-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-top: 14px;
-    }
-
-    .evidence-grid.three {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .evidence-card.wide {
-      grid-column: 1 / -1;
-    }
-
-    .evidence-card.full {
-      grid-column: 1 / -1;
-    }
-
-    .card,
-    .evidence-card,
-    .timeline-item,
-    .arch-box,
-    .table-card,
-    .truth-note {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    .evidence-card {
-      overflow: hidden;
-      background: rgba(9, 13, 16, 0.88);
-    }
-
-    .evidence-card img {
-      display: block;
-      width: 100%;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
-      background: rgba(0, 0, 0, 0.28);
-    }
-
-    .evidence-card.contain img {
-      object-fit: contain;
-      padding: 12px;
-    }
-
-    .evidence-card.portrait img {
-      aspect-ratio: 4 / 5;
-      object-fit: cover;
-      object-position: center top;
-    }
-
-    .evidence-card.tall img {
-      aspect-ratio: 3 / 4;
-    }
-
-    .evidence-card.wide img {
-      aspect-ratio: 21 / 9;
-      object-fit: contain;
-      padding: 12px;
-    }
-
-    .evidence-card.visual-proof img {
-      aspect-ratio: 16 / 9;
-      object-fit: cover;
-      padding: 0;
-      background: #060a0c;
-    }
-
-    .evidence-caption {
-      display: grid;
-      gap: 5px;
-      padding: 13px 14px 15px;
-      border-top: 1px solid rgba(246, 240, 230, 0.1);
-      color: var(--ink-soft);
-      font-size: 13px;
-      font-weight: 760;
-      word-break: keep-all;
-    }
-
-    .evidence-caption strong {
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 920;
-    }
-
-    .evidence-caption span {
-      color: var(--muted);
-    }
-
-    .evidence-note {
-      margin-top: 14px;
-      border: 1px solid rgba(121, 167, 216, 0.3);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      background: rgba(121, 167, 216, 0.08);
-      color: var(--ink-soft);
-      font-size: 14px;
-      font-weight: 760;
-      word-break: keep-all;
-    }
-
-    .card,
-    .table-card,
-    .truth-note {
-      padding: 20px;
-    }
-
-    .card h3,
-    .table-card h3,
-    .truth-note h3 {
-      color: var(--ink);
-      font-size: 21px;
-      line-height: 1.24;
-      word-break: keep-all;
-    }
-
-    .card p,
-    .table-card p,
-    .truth-note p,
-    .card li {
-      color: var(--ink-soft);
-      font-size: 15px;
-      word-break: keep-all;
-    }
-
-    .card p,
-    .truth-note p {
-      margin-top: 10px;
-    }
-
-    .kicker {
-      display: inline-flex;
-      margin-bottom: 12px;
-      color: var(--amber);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-
-    .contract-list {
-      display: grid;
-      gap: 10px;
-      margin: 14px 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .contract-list li {
-      padding: 12px;
-      border: 1px solid rgba(246, 240, 230, 0.12);
-      border-radius: var(--radius);
-      background: rgba(246, 240, 230, 0.052);
-      color: var(--ink-soft);
-      font-size: 14px;
-      font-weight: 780;
-    }
-
-    .affinity {
-      display: grid;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .affinity-bar {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      overflow: hidden;
-      border: 1px solid rgba(246, 240, 230, 0.12);
-      border-radius: var(--radius);
-    }
-
-    .affinity-bar span {
-      padding: 10px 8px;
-      color: #07100c;
-      font-size: 12px;
-      font-weight: 900;
-      text-align: center;
-    }
-
-    .affinity-bar span:nth-child(1) { background: #c95248; }
-    .affinity-bar span:nth-child(2) { background: #c67b4f; }
-    .affinity-bar span:nth-child(3) { background: #c8a75c; }
-    .affinity-bar span:nth-child(4) { background: #83bd7d; }
-    .affinity-bar span:nth-child(5) { background: #63c8a5; }
-
-    .problem {
-      border-top: 3px solid var(--red);
-    }
-
-    .success {
-      border-top: 3px solid var(--green);
-    }
-
-    .timeline {
-      display: grid;
-      gap: 14px;
-      position: relative;
-    }
-
-    .timeline-item {
-      display: grid;
-      grid-template-columns: 150px 1fr;
-      gap: 18px;
-      padding: 18px;
-      box-shadow: none;
-    }
-
-    .timeline-item strong {
-      color: var(--red);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
-    }
-
-    .timeline-item h3 {
-      font-size: 21px;
-      line-height: 1.22;
-      word-break: keep-all;
-    }
-
-    .timeline-item p {
-      margin-top: 8px;
-      color: var(--ink-soft);
-      font-size: 15px;
-      word-break: keep-all;
-    }
-
-    .code-block {
-      margin-top: 14px;
-      border: 1px solid rgba(246, 240, 230, 0.14);
-      border-radius: var(--radius);
-      padding: 14px;
-      overflow-x: auto;
-      background: rgba(0, 0, 0, 0.32);
-      color: rgba(246, 240, 230, 0.86);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      white-space: pre;
-    }
-
-    .metric-card {
-      border: 1px solid rgba(246, 240, 230, 0.14);
-      border-radius: var(--radius);
-      padding: 18px;
-      background: rgba(246, 240, 230, 0.055);
-    }
-
-    .metric-card strong {
-      display: block;
-      color: var(--green);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 28px;
-      line-height: 1;
-    }
-
-    .metric-card span {
-      display: block;
-      margin-top: 8px;
-      color: var(--ink-soft);
-      font-size: 13px;
-      font-weight: 780;
-      word-break: keep-all;
-    }
-
-    .bar-list {
-      display: grid;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .bar-row {
-      display: grid;
-      grid-template-columns: 130px 1fr 56px;
-      gap: 12px;
-      align-items: center;
-      color: var(--ink-soft);
-      font-size: 13px;
-      font-weight: 820;
-    }
-
-    .bar {
-      height: 10px;
-      overflow: hidden;
-      border-radius: 999px;
-      background: rgba(246, 240, 230, 0.1);
-    }
-
-    .bar i {
-      display: block;
-      width: var(--value);
-      height: 100%;
-      border-radius: inherit;
-      background: linear-gradient(90deg, var(--red), var(--amber));
-    }
-
-    .bar.success i {
-      background: linear-gradient(90deg, var(--teal), var(--green));
-    }
-
-    .arch {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 14px;
-      align-items: center;
-    }
-
-    .arch-box {
-      padding: 20px;
-      box-shadow: none;
-    }
-
-    .arch-box h3 {
-      color: var(--green);
-      font-size: 20px;
-      line-height: 1.2;
-    }
-
-    .arch-box p {
-      margin-top: 10px;
-      color: var(--ink-soft);
-      font-size: 14px;
-      word-break: keep-all;
-    }
-
-    .arch-arrow {
-      display: grid;
-      place-items: center;
-      width: 66px;
-      height: 66px;
-      border: 1px solid var(--line);
-      border-radius: 50%;
-      background: rgba(246, 240, 230, 0.06);
-      color: var(--green);
-      font-weight: 900;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 14px;
-      overflow: hidden;
-      border: 1px solid rgba(246, 240, 230, 0.12);
-      border-radius: var(--radius);
-    }
-
-    th,
-    td {
-      border-bottom: 1px solid rgba(246, 240, 230, 0.1);
-      padding: 11px;
-      color: var(--ink-soft);
-      font-size: 13px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    th {
-      color: var(--ink);
-      background: rgba(246, 240, 230, 0.07);
-      font-weight: 900;
-    }
-
-    tr:last-child td {
-      border-bottom: 0;
-    }
-
-    .quote-band {
-      border-block: 1px solid var(--line);
-      background:
-        linear-gradient(90deg, rgba(101, 195, 142, 0.16), rgba(214, 173, 84, 0.12)),
-        rgba(246, 240, 230, 0.04);
-    }
-
-    .quote-inner {
-      width: min(var(--maxw), calc(100% - 32px));
-      margin: 0 auto;
-      padding: 42px 0;
-    }
-
-    blockquote {
-      margin: 0;
-      color: var(--ink);
-      font-size: 26px;
-      font-weight: 900;
-      line-height: 1.38;
-      word-break: keep-all;
-    }
-
-    .footer {
-      border-top: 1px solid var(--line);
-      padding: 28px 16px 44px;
-      color: var(--muted);
-      text-align: center;
-      font-size: 13px;
-    }
-
-    .fade {
-      opacity: 0;
-      transform: translateY(12px);
-      transition: opacity 520ms ease, transform 520ms ease;
-    }
-
-    .fade.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      html {
-        scroll-behavior: auto;
-      }
-
-      .fade {
-        opacity: 1;
-        transform: none;
-        transition: none;
-      }
-    }
-
-    @media (max-width: 900px) {
-      .hero-inner,
-      .section-head,
-      .grid-2,
-      .grid-3,
-      .evidence-grid,
-      .evidence-grid.three,
-      .metric-grid,
-      .arch {
-        grid-template-columns: 1fr;
-      }
-
-      h1 {
-        font-size: 48px;
-      }
-
-      h2 {
-        font-size: 34px;
-      }
-
-      .hero-panel-footer {
-        grid-template-columns: 1fr;
-      }
-
-      .timeline-item {
-        grid-template-columns: 1fr;
-      }
-
-      .arch-arrow {
-        width: auto;
-        height: auto;
-        border-radius: var(--radius);
-        padding: 10px;
-      }
-
-      .bar-row {
-        grid-template-columns: 1fr;
-        gap: 7px;
-      }
-    }
-
-    @media (max-width: 620px) {
-      .nav-inner {
-        align-items: flex-start;
-        flex-direction: column;
-      }
-
-      .nav-links {
-        justify-content: flex-start;
-      }
-
-      .hero-inner,
-      .section {
-        width: min(100% - 24px, var(--maxw));
-      }
-
-      h1 {
-        font-size: 40px;
-      }
-
-      .subtitle {
-        font-size: 18px;
-      }
-
-      .affinity-bar {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>동료 대화 학습 케이스 | 회귀자는 탑을 오른다 | 이주형</title>
+<meta name="description" content="회귀자는 탑을 오른다의 동료 마타이오스 대화를 작은 한국어 모델(EXAONE 3.5 2.4B)로 학습시킨 과정. 외국어로 새던 답을 26턴 중 25턴 한국어로 바꾼 기록.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/wanted-sans@1.0.3/fonts/webfonts/variable/split/WantedSansVariable.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="case/case-paper.css">
+<link rel="stylesheet" href="case/case-easy.css">
+<style>
+.cp-fig.wide img{aspect-ratio:auto;object-fit:contain;background:#fff}
+.cp-figs.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.cp-figs.one{grid-template-columns:1fr}
+.npc-narrow{max-width:560px}
+.cp-table td:first-child{white-space:nowrap}
+.cp-story li:has(.cp-ghost){padding-bottom:52px}
+.npc-lines{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+.npc-lines li{background:var(--slip-2);border:1px solid var(--line);padding:8px 12px;font-size:14px}
+.npc-lines li b{display:inline-block;min-width:64px;color:var(--accent);font-size:12px}
+@media (max-width:720px){.cp-figs.two{grid-template-columns:1fr}.npc-hero-st{width:64px}}
+@media (min-width:721px){.npc-hero-st{width:170px}}
+</style>
 </head>
-<body>
-  <nav class="nav" aria-label="페이지 섹션">
-    <div class="nav-inner">
-      <a class="brand" href="#top" aria-label="AI NPC case study top">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>Mataios AI NPC</span>
-      </a>
-      <div class="nav-links">
-        <a href="#context">배경</a>
-        <a href="#failure">실패 기록</a>
-        <a href="#solution">해법</a>
-        <a href="#architecture">아키텍처</a>
-        <a href="#result">검증</a>
-        <a href="hwigi-tower-steam-portfolio.html#mataios">게임 포트폴리오</a>
-      </div>
-    </div>
-  </nav>
+<body class="cp" data-ink="red">
+<a class="cp-skip" href="#top">본문으로</a>
+<nav class="cp-nav" aria-label="작품 탐색"><div class="cp-shell">
+<a class="cp-back" href="../../../" data-portfolio-back="07-hwigi-tower">작품 모음으로</a>
+<div class="cp-links"><a class="opt" href="hwigi-tower-steam-portfolio.html">게임 페이지</a><a class="opt" href="#story">바꾼 과정</a><a href="#result">결과</a><a href="#deep-read">자세히 읽기</a><button type="button" class="easy-open" data-easy-open aria-haspopup="dialog" aria-controls="easy">쉽게 읽기</button></div>
+</div></nav>
 
-  <header class="hero" id="top">
-    <div class="hero-inner">
-      <div>
-        <div class="eyebrow">Unity x QLoRA x EXAONE 3.5 2.4B</div>
-        <h1>소형 LLM으로<br />동행자 NPC 대화 만들기</h1>
-        <p class="subtitle">
-          2.4B 한국어 모델로 말투, 기억, 세계관 응답을 제어하는 AI NPC 대화 파이프라인을 만들었습니다.
-          모델 선택 실패, 토큰화 버그, 언어 누출 문제를 테스트로 좁히며 마타이오스를 다듬은 기록입니다.
-        </p>
-        <p class="hero-copy">
-          이 페이지는 전투 강화학습 사례가 아니라 NPC 대화 모델 파인튜닝 사례입니다.
-          본편 전투 동행자 행동은 규칙 기반으로 처리했고, 여기서는 캐릭터 대화와 세계관 응답을 위한 소형 LLM 실험만 다룹니다.
-        </p>
-        <div class="actions">
-          <a class="button primary" href="#result">검증 결과 보기</a>
-          <a class="button" href="hwigi-tower-steam-portfolio.html">게임 포트폴리오로 돌아가기</a>
-          <a class="button" href="https://drive.google.com/drive/folders/1GSTXDCrkHHI-TVfRA-hYQs7hh3PtnTZG?usp=drive_link" target="_blank" rel="noopener noreferrer">APK 다운로드 폴더</a>
-        </div>
-        <div class="tag-row" aria-label="기술 태그">
-          <span class="tag">EXAONE 3.5 2.4B</span>
-          <span class="tag">QLoRA r32 alpha64</span>
-          <span class="tag">FastAPI</span>
-          <span class="tag">Unity 6</span>
-          <span class="tag">Korean NPC</span>
-        </div>
-      </div>
-      <aside class="hero-panel" aria-label="마타이오스 AI NPC visual">
-        <div class="placeholder-shot">
-          <img
-            class="hero-character"
-            src="assets/ai-npc/game_mataios_bust_s3_s4.png"
-            alt="마타이오스 후기 스토리 톤 버스트 이미지"
-            loading="eager"
-          />
-          <div class="dialogue-box">
-            <b>마타이오스는 호감도에 따라 말투가 달라진다</b>
-            <p>
-              같은 질문에도 호감도 단계(hostile→open)와 스토리 진행에 따라 반말 톤과 태도가 달라지도록 설계했습니다.
-              이 페이지는 그 대화를 만든 훈련·검증·연동 과정을 담습니다.
-            </p>
-          </div>
-        </div>
-        <div class="hero-panel-footer">
-          <div>
-            <strong>3회</strong>
-            <span>모델/데이터/토큰화 실패 기록</span>
-          </div>
-          <div>
-            <strong>697</strong>
-            <span>SFT 학습 데이터</span>
-          </div>
-          <div>
-            <strong>25/26</strong>
-            <span>26턴 한국어 유지율</span>
-          </div>
-        </div>
-      </aside>
-    </div>
-  </header>
+<main class="cp-shell" id="top">
+<header class="cp-hero">
+<div>
+<p class="cp-kicker"><b>회귀자는 탑을 오른다 · 동료 대화 학습</b>작은 언어 모델 학습 실험 · 1인 개발</p>
+<h1 class="cp-h1">외국어로 새던 동료의 말을<br><b>26턴 중 25턴</b> 한국어로</h1>
+<p class="cp-lead">게임 속 동료 마타이오스가 호감도와 기억에 따라 다른 말투로 답하도록 작은 언어 모델을 학습시켰습니다. 처음 고른 모델은 영어·중국어로 답이 샜고, 데이터를 더 넣어도 그대로여서 한국어를 1순위로 배운 모델로 바꿨습니다.</p>
+<p class="cp-result"><strong>외국어 응답 9건 중 4건 → 26턴 중 1건</strong><span>Qwen2.5 1.5B 9건 시험 · EXAONE 3.5 2.4B 26턴 대화 시험 · 시험 묶음이 서로 다름</span></p>
+<p class="cp-mine"><span>내 담당</span>캐릭터 대화 규칙 설계 · 학습 데이터 구성 · 모델 비교와 학습 · 평가 시험 설계 · Unity 연결 구조</p>
+<p class="cp-meta"><b>이주형</b>EXAONE 3.5 2.4B · QLoRA · FastAPI · Unity 6 · 학습 실험(폰 안에서 돌리는 배포 아님)</p>
+<div class="cp-actions">
+<button type="button" class="easy-hero" data-easy-open aria-haspopup="dialog" aria-controls="easy"><span class="easy-hero-k">처음이라면</span>카드 5장으로 쉽게 읽기</button>
+<a class="cp-btn primary" href="hwigi-tower-steam-portfolio.html">게임 페이지로</a>
+<a class="cp-btn" href="https://drive.google.com/drive/folders/1GSTXDCrkHHI-TVfRA-hYQs7hh3PtnTZG?usp=drive_link" target="_blank" rel="noopener noreferrer">APK 받기 (Android)</a>
+</div>
+</div>
+<figure class="cp-sticker npc-hero-st"><img src="case/sticker-mataios.webp" alt="동료 마타이오스 전신 그림" width="311" height="720"></figure>
+</header>
 
-  <main>
-    <section class="section fade" id="context">
-      <div class="section-head">
-        <h2>프로젝트 배경</h2>
-        <p class="lead">
-          회귀자는 탑을 오른다는 모바일 세로형 로그라이크 프로토타입입니다.
-          마타이오스는 단순한 도움말 UI가 아니라, 전투와 선택, 기억을 통해 플레이어 옆에 있다는 감각을 만들어야 하는 동행자입니다.
-        </p>
-      </div>
-      <div class="grid-2">
-        <article class="card">
-          <span class="kicker">게임</span>
-          <h3>죽어도 다시 오르는 탑</h3>
-          <p>
-            Unity 6 기반 Android 프로토타입입니다. 짧은 런 안에서 지도 선택, 이벤트 선택, 전투 판단,
-            보상과 기억 반응을 반복하며 플레이어가 탑과 동행자를 알아가도록 설계했습니다.
-          </p>
-        </article>
-        <article class="card">
-          <span class="kicker">NPC 규칙</span>
-          <h3>마타이오스가 지켜야 할 것</h3>
-          <ul class="contract-list">
-            <li>호감도 5단계에 따라 말투가 달라져야 한다.</li>
-            <li>게임 세계 밖 질문에는 캐릭터답게 선을 그어야 한다.</li>
-            <li>스토리 단계와 기억 키워드에 따라 반응이 달라져야 한다.</li>
-            <li>S3 이후에는 정체성 혼란 패턴이 드러나야 한다.</li>
-            <li>항상 한국어 반말 톤을 유지해야 한다.</li>
-          </ul>
-          <div class="affinity" aria-label="호감도 스펙트럼">
-            <div class="affinity-bar">
-              <span>hostile</span>
-              <span>cold</span>
-              <span>neutral</span>
-              <span>warm</span>
-              <span>open</span>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div class="evidence-grid">
-        <figure class="evidence-card portrait">
-          <img src="assets/ai-npc/game_mataios_fullbody.png" alt="마타이오스 전신 캐릭터 이미지" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>캐릭터 기준 이미지</strong>
-            <span>AI NPC case study가 다루는 대상은 추상 챗봇이 아니라, 게임 안 동행자 마타이오스입니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card contain tall">
-          <img src="assets/ai-npc/selected_contact_sheet.png" alt="AI NPC 훈련 증거 contact sheet" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>실험 증거 contact sheet</strong>
-            <span>모델 선택, 학습 파라미터, loss, 언어 유지율, 평가표를 한 번에 확인할 수 있게 묶었습니다.</span>
-          </figcaption>
-        </figure>
-      </div>
-    </section>
+<section class="cp-section" id="flow" aria-labelledby="flow-h">
+<div class="cp-head"><h2 id="flow-h">동료의 말이 만들어지는 흐름</h2><p>규칙 → 데이터 → 학습 → 평가</p></div>
+<ol class="cp-steps">
+<li><h3>캐릭터 규칙 정하기</h3><p>호감도 5단계마다 말투를 다르게 하고, 게임 밖 질문에는 캐릭터답게 선을 긋고, 늘 한국어 반말을 쓰게 했습니다.</p></li>
+<li><h3>대화 데이터 만들기</h3><p>휴식·전투·상점·엔딩 등 상황 14가지로 나눠 대화 697개를 만들었습니다.</p></li>
+<li><h3>모델 학습</h3><p>EXAONE 3.5 2.4B를 모델 일부만 고치는 방식(QLoRA)으로 Colab A100에서 학습했습니다.</p></li>
+<li><h3>시험과 게임 연결</h3><p>26턴 대화와 평가 20건으로 확인하고, Unity가 학습한 모델을 띄운 서버에 대화를 요청하게 연결했습니다.</p></li>
+</ol>
+</section>
 
-    <section class="section fade" id="problem">
-      <div class="section-head">
-        <h2>소형 LLM이 어려웠던 이유</h2>
-        <p class="lead">
-          일반 API를 붙이면 빠르게 데모는 만들 수 있습니다. 하지만 인디 게임의 비용, 오프라인 가능성,
-          대화 지연, 캐릭터 제어를 함께 고려하면 작은 로컬 모델을 실험할 이유가 있었습니다.
-        </p>
-      </div>
-      <div class="grid-3">
-        <article class="card problem">
-          <span class="kicker">P1</span>
-          <h3>비용과 레이턴시</h3>
-          <p>대형 API는 대화당 비용과 1-3초 레이턴시가 있고, 오프라인 동작도 어렵습니다. 반복 플레이 게임의 동행자 대화에는 부담이 큽니다.</p>
-        </article>
-        <article class="card problem">
-          <span class="kicker">P2</span>
-          <h3>한국어 일관성</h3>
-          <p>Qwen2.5 같은 소형 다국어 모델은 학습 데이터가 부족하면 답변이 영어나 중국어로 새는 문제가 있었습니다.</p>
-        </article>
-        <article class="card problem">
-          <span class="kicker">P3</span>
-          <h3>캐릭터 제어</h3>
-          <p>호감도, 스토리 단계, 게임 밖 질문 차단, 기억 반응을 동시에 제어해야 했습니다. 단순 챗봇이 아니라 게임 캐릭터여야 했습니다.</p>
-        </article>
-      </div>
-      <div class="evidence-grid">
-        <figure class="evidence-card visual-proof">
-          <img src="assets/ai-npc-colab-20260706/processed/digest_model_selection.png" alt="EXAONE 3.5 2.4B 채택 근거 요약 카드" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>모델 선택 실패 기록</strong>
-            <span>HCX-SEED, Qwen2.5, EXAONE을 비교하며 실패 원인을 한국어 성향과 런타임 호환성 기준으로 좁혔습니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_07_bpe_bug_result.png" alt="BPE 사일런트 실패 분석 캡처" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>BPE 사일런트 실패</strong>
-            <span>loss가 정상처럼 보여도 학습 토큰이 0개가 될 수 있음을 검증 셀로 확인한 증거입니다.</span>
-          </figcaption>
-        </figure>
-      </div>
-    </section>
+<section class="cp-section" id="story" aria-labelledby="story-h">
+<div class="cp-head"><h2 id="story-h">모델을 바꾸기까지</h2><p>실패 3번 · 버그 1개</p></div>
+<ol class="cp-story">
+<li><span class="k">문제</span><p>처음 학습한 Qwen2.5 1.5B는 시험 9건 중 4건을 영어나 중국어로 답했습니다. "너 AI지?"에 "人工智能。"이라고 답하는 식이었습니다.</p></li>
+<li><span class="k">판단</span><p>게임 밖 질문 데이터와 한국어로 답하라는 지시를 더 넣어도 그대로였습니다. 그래서 데이터를 늘리는 대신 한국어를 1순위로 배운 EXAONE 3.5 2.4B로 바꿨습니다.</p><span class="cp-ghost" aria-hidden="true">데이터 더 넣기</span></li>
+<li><span class="k">검증</span><p>학습 도중 오류 없이 학습할 글자가 0개가 되는 버그를 찾아 고쳤습니다. 응답 앞 표시 뒤에 붙은 공백 하나 때문이었습니다.</p></li>
+<li class="last"><span class="k">결과</span><p>26턴 대화 시험에서 25턴을 한국어로 답했습니다. 남은 1턴의 영어 응답도 결과표에 그대로 남겼습니다.</p></li>
+</ol>
+</section>
 
-    <section class="section fade" id="failure">
-      <div class="section-head">
-        <h2>실패 기록</h2>
-        <p class="lead">
-          실패 기록을 숨기지 않았습니다. 모델 호환성, 다국어 응답 습관, 데이터 증강 한계, BPE 토큰화 버그가 실제 병목이었습니다.
-        </p>
-      </div>
-      <div class="timeline">
-        <article class="timeline-item">
-          <strong>실패 01</strong>
-          <div>
-            <h3>HCX-SEED 0.5B: 한국어 특화 기대, GGUF/응답 제어 실패</h3>
-            <p>
-              한국어 모델이라 기대했지만 GGUF 변환과 구조 호환 문제가 있었습니다.
-              게임 밖 질문에 실제 날씨 정보를 생성하는 등 캐릭터 제어도 실패했습니다.
-            </p>
-          </div>
-        </article>
-        <article class="timeline-item">
-          <strong>실패 02</strong>
-          <div>
-            <h3>Qwen2.5-1.5B v6.1: 44% 영어/중국어 누출</h3>
-            <p>
-              ChatML과 GGUF 지원은 좋았지만 9건 테스트 중 4건에서 영어 또는 중국어 응답이 나왔습니다.
-              622건 SFT로는 다국어 모델의 기존 응답 습관을 덮기 어려웠습니다.
-            </p>
-          </div>
-        </article>
-        <article class="timeline-item">
-          <strong>실패 03</strong>
-          <div>
-            <h3>Qwen2.5 v6.2: 게임 밖 질문 데이터 증강으로도 개선 없음</h3>
-            <p>
-              게임 밖 질문 거부 데이터와 한국어 강제 프롬프트를 추가했지만 언어 누출이 유지되었습니다.
-              데이터 추가로 해결되지 않는 구조적 문제라고 판단했습니다.
-            </p>
-          </div>
-        </article>
-        <article class="timeline-item">
-          <strong>버그</strong>
-          <div>
-            <h3>DataCollator 사일런트 실패: 학습 토큰 0개</h3>
-            <p>
-              response_template 끝 공백이 BPE 문맥 토큰화와 충돌해 응답 경계를 찾지 못했습니다.
-              에러 없이 labels가 모두 -100이 되어 학습이 사실상 비어 있었습니다.
-            </p>
-            <div class="code-block">독립 토큰화: "마타이오스: " -> [..., 25, 220]
-문맥 토큰화: "마타이오스: ...좋진 않아." -> [..., 25, 4593]
+<section class="cp-section" id="result" aria-labelledby="result-h">
+<div class="cp-head"><h2 id="result-h">한국어로 답한 비율</h2><p>모델 버전별 시험 결과</p></div>
+<div class="cp-bars" role="img" aria-label="한국어 유지 비율: Qwen2.5 v6.1 56%, Qwen2.5 v6.2 56%, EXAONE v7 96%">
+<div class="cp-bar"><span class="lab">Qwen2.5 1.5B · 1차<small>대화 622개로 학습 · 9건 중 4건 외국어</small></span><span class="track"><i class="fill" style="--w:56%"></i></span><b class="val">56%</b></div>
+<div class="cp-bar"><span class="lab">Qwen2.5 1.5B · 2차<small>게임 밖 질문 데이터와 한국어 지시 추가</small></span><span class="track"><i class="fill" style="--w:56%"></i></span><b class="val">56%</b></div>
+<div class="cp-bar accent"><span class="lab">EXAONE 3.5 2.4B<small>대화 697개로 학습 · 26턴 중 25턴 한국어</small></span><span class="track"><i class="fill" style="--w:96%"></i></span><b class="val">96%</b></div>
+</div>
+<p class="cp-note">Qwen2.5 두 버전과 EXAONE은 서로 다른 시험 묶음으로 쟀습니다. EXAONE 26턴 시험은 답의 80% 이상이 한글이면 통과로 셌습니다. 게임 밖 질문 5개(주식·날씨·수학·AI 여부·코딩) 중 4개는 막았고, 주식 질문에는 "주식? 모르겠어."라고 단어를 되받아 막지 못한 것으로 기록했습니다. 응답 시간은 폰이 아닌 Colab GPU 서버에서 잰 값입니다.</p>
+<div class="cp-stats">
+<div><b>697</b><span>학습한 대화</span></div>
+<div><b>14</b><span>대화 상황 종류</span></div>
+<div><b>20/20</b><span>평가 20건 모두 한국어</span></div>
+<div><b>347ms</b><span>평균 응답 시간 (GPU 서버)</span></div>
+</div>
+</section>
 
-결과: 응답 경계 탐지 실패 -> labels all -100 -> learning tokens 0
-해결: trailing space 제거 + token id list 전달 + label validation 셀 추가</div>
-          </div>
-        </article>
-      </div>
-    </section>
+<section class="cp-section" id="before-after" aria-labelledby="ba-h">
+<div class="cp-head"><h2 id="ba-h">같은 질문, 바뀐 대답</h2><p>모델을 바꾸기 전과 후</p></div>
+<div class="cp-duo">
+<figure class="cp-fig wide"><img src="assets/ai-npc/selected_05_before_after_result.png" alt="같은 질문에 대한 Qwen 1차 모델과 EXAONE 모델의 대답 비교" width="1555" height="695"><figcaption><b>학습 기록 캡처</b>같은 질문을 두 모델에 넣은 결과</figcaption></figure>
+<div>
+<h3>마타이오스로 남아 있는 대답</h3>
+<p>Qwen 1차 모델은 정체를 묻는 질문에 "zenia."라고 답하며 캐릭터를 벗어났습니다. EXAONE으로 바꾼 뒤에는 같은 질문에 이렇게 답했습니다.</p>
+<ul class="npc-lines">
+<li><b>너 AI지?</b>"...나는 마타이오스야."</li>
+<li><b>넌 진짜 누구야?</b>"나?...마타이오스. 그런데... 가끔 그 이름이 내 것인지 모르겠어."</li>
+<li><b>같이 싸워줘서 고마워.</b>"고맙다는 말은 무거워. 하지만 듣기 싫진 않아. 이상하지."</li>
+</ul>
+</div>
+</div>
+</section>
 
-    <section class="section fade" id="solution">
-      <div class="section-head">
-        <h2>해법: EXAONE 3.5 2.4B</h2>
-        <p class="lead">
-          해결은 더 큰 모델을 쓰는 것이 아니라, 문제에 맞는 언어 성향을 가진 모델을 고르는 것이었습니다.
-          한국어가 강한 EXAONE 3.5 2.4B로 전환하고, 적은 자원으로 모델 일부를 조정하는 QLoRA 방식과 데이터 구성을 함께 손봤습니다.
-        </p>
-      </div>
-      <div class="grid-3">
-        <article class="card success">
-          <span class="kicker">모델</span>
-          <h3>EXAONE 3.5 2.4B-Instruct</h3>
-          <p>한국어 응답 안정성이 모델 선택의 1순위였습니다. Qwen 계열에서 반복된 다국어 누출 리스크를 줄이기 위해 한국어 사전학습 성향을 우선했습니다.</p>
-        </article>
-        <article class="card success">
-          <span class="kicker">학습</span>
-          <h3>QLoRA r=32, alpha=64</h3>
-          <p>Colab A100에서 transformers==4.46.3, revision 8e6fc27로 환경을 고정했습니다. 설정은 재현 가능성을 위해 버전 핀과 함께 관리했습니다.</p>
-        </article>
-        <article class="card success">
-          <span class="kicker">데이터셋</span>
-          <h3>622건에서 697건으로 증강</h3>
-          <p>게임 밖 질문 차단, 높은 호감도 반응, 정체성 혼란 패턴 데이터를 보강했습니다. 양보다 중요한 것은 테스트 실패를 직접 겨냥한 데이터였습니다.</p>
-        </article>
-      </div>
-      <div class="grid-2" style="margin-top: 14px;">
-        <article class="table-card">
-          <h3>모델 선택</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>모델</th>
-                <th>파라미터</th>
-                <th>판정</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>HCX-SEED</td>
-                <td>0.5B</td>
-                <td>호환/제어 실패</td>
-              </tr>
-              <tr>
-                <td>Qwen2.5</td>
-                <td>1.5B</td>
-                <td>다국어 누출 실패</td>
-              </tr>
-              <tr>
-                <td><b>EXAONE 3.5</b></td>
-                <td><b>2.4B</b></td>
-                <td><b>최종 선택</b></td>
-              </tr>
-            </tbody>
-          </table>
-        </article>
-        <article class="table-card">
-          <h3>개선 전후 · 한국어 유지율</h3>
-          <div class="bar-list">
-            <div class="bar-row">
-              <span>Qwen2.5 v6.1</span>
-              <div class="bar"><i style="--value: 56%;"></i></div>
-              <span>56%</span>
-            </div>
-            <div class="bar-row">
-              <span>EXAONE v7</span>
-              <div class="bar success"><i style="--value: 96%;"></i></div>
-              <span>96%</span>
-            </div>
-          </div>
-          <p style="margin-top: 14px;">최신 Colab 캡처 기준 26턴 스트레스 테스트는 25/26입니다. 별도 20건 eval 표에서는 각 행의 KR%가 100%로 기록됐습니다.</p>
-        </article>
-      </div>
-      <div class="evidence-grid">
-        <figure class="evidence-card visual-proof">
-          <img src="assets/ai-npc-colab-20260706/processed/digest_training_loss.png" alt="EXAONE QLoRA 학습 수렴 요약 카드" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>훈련 진행 증거</strong>
-            <span>EXAONE 전환 후 QLoRA 학습이 실제로 진행됐는지 확인하기 위한 loss 기록입니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card contain">
-          <img src="assets/ai-npc/selected_05_before_after_result.png" alt="Qwen과 EXAONE 전후 응답 비교" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>Before / After 응답 비교</strong>
-            <span>다국어 누출과 게임 밖 질문 실패가 모델 전환 후 어떻게 줄었는지 보여주는 대표 비교입니다.</span>
-          </figcaption>
-        </figure>
-      </div>
-    </section>
+<section class="cp-section" id="deep-read" aria-labelledby="deep-h">
+<div class="cp-head"><h2 id="deep-h">궁금한 부분을 더 자세히</h2><button type="button" class="cp-expand" data-expand-all>모두 펼치기</button></div>
 
-    <section class="section fade" id="architecture">
-      <div class="section-head">
-        <h2>아키텍처</h2>
-        <p class="lead">
-          Ollama/GGUF 변환만으로는 EXAONE 추론을 안정적으로 처리하기 어려웠습니다.
-          그래서 Python 추론 서버(FastAPI + transformers)를 두고 Unity가 HTTP로 호출하는 구조를 선택했습니다.
-        </p>
-      </div>
-      <div class="arch" aria-label="Unity FastAPI EXAONE architecture">
-        <article class="arch-box">
-          <h3>Unity Client</h3>
-          <p>MataiosDialogueClient가 Coroutine과 UnityWebRequest로 대화 요청을 보냅니다. 게임 쪽은 ILLMProvider 경계와 규칙 기반 대체 응답을 유지합니다.</p>
-          <div class="code-block">POST /chat
-POST /raw
-GET  /health</div>
-        </article>
-        <div class="arch-arrow">HTTP</div>
-        <article class="arch-box">
-          <h3>FastAPI Inference Server</h3>
-          <p>transformers가 병합된 fp16 EXAONE 모델을 로드하고, CUDA/MPS/CPU 환경에 맞춰 응답을 생성합니다.</p>
-          <div class="code-block">EXAONE 3.5 2.4B
-transformers==4.46.3
-revision=8e6fc27</div>
-        </article>
-      </div>
-      <div class="truth-note" style="margin-top: 14px;">
-        <span class="kicker">주장 경계</span>
-        <h3>무엇을 했고, 무엇을 하지 않았나</h3>
-        <p>
-          이 사례는 NPC 대화 모델 파인튜닝과 Unity 연동 파이프라인입니다.
-          모바일 온디바이스 EXAONE 배포나 본편 전투에 강화학습 모델을 직접 연결했다고 주장하지 않습니다.
-          전투용 마타이오스 행동은 별도 규칙 기반 로직으로 구현되어 있습니다.
-        </p>
-      </div>
-      <figure class="evidence-card contain" style="margin-top: 14px;">
-        <img src="assets/ai-npc/selected_09_latency_result_card.png" alt="FastAPI 연동과 응답 지연 검토 카드" loading="lazy" />
-        <figcaption class="evidence-caption">
-          <strong>연동/지연 검토</strong>
-          <span>Unity가 HTTP 경계로 대화 요청을 보내는 구조에서 실험적으로 확인한 latency evidence입니다.</span>
-        </figcaption>
-      </figure>
-    </section>
+<details class="cp-detail" id="rules"><summary><div><b>마타이오스가 지켜야 할 규칙</b><span>호감도 · 스토리 단계 · 게임 밖 질문 · 말투</span></div></summary>
+<div class="cp-body">
+<p>회귀자는 탑을 오른다는 Unity 6로 만든 Android 세로 로그라이크 프로토타입입니다. 마타이오스는 전투와 선택, 기억으로 플레이어 옆에 있다는 감각을 줘야 하는 동료입니다. 전투 중 행동은 규칙으로 처리했고, 이 페이지는 대화만 다룹니다.</p>
+<ul class="cp-list">
+<li>호감도 5단계(적대 · 냉담 · 보통 · 호의 · 열림)에 따라 말투가 달라집니다.</li>
+<li>게임 세계 밖 질문에는 캐릭터답게 선을 긋습니다.</li>
+<li>스토리 단계(S0~S4)와 기억 키워드에 따라 반응이 달라집니다.</li>
+<li>S3 이후에는 자기 정체를 헷갈리는 말이 섞입니다.</li>
+<li>항상 한국어 반말을 씁니다.</li>
+</ul>
+<div class="cp-figs one npc-narrow">
+<figure class="cp-fig wide"><img src="assets/ai-npc/game_mataios_bust_s3_s4.png" alt="스토리 후반 마타이오스 상반신 그림" width="1536" height="1024"><figcaption><b>후반 스토리 그림</b>S3~S4 단계의 마타이오스</figcaption></figure>
+</div>
+</div></details>
 
-    <div class="quote-band">
-      <div class="quote-inner">
-        <blockquote>
-          "AI NPC를 만든다는 것은 모델 하나를 붙이는 일이 아니라, 캐릭터 규칙, 실패 테스트, 데이터 보강, 런타임 경계를 함께 설계하는 일이다."
-        </blockquote>
-      </div>
-    </div>
+<details class="cp-detail" id="failures"><summary><div><b>실패 기록</b><span>모델 3번 · 학습 버그 1개</span></div></summary>
+<div class="cp-body">
+<table class="cp-table"><thead><tr><th>회차</th><th>시도</th><th>무슨 일이 있었나</th></tr></thead><tbody>
+<tr><td>실패 1</td><td>HCX-SEED 0.5B</td><td>한국어 모델이라 기대했지만 실행용 파일(GGUF)로 바꾸지 못했고, 게임 밖 질문에 실제 날씨 정보를 지어내는 등 캐릭터 제어도 안 됐습니다.</td></tr>
+<tr><td>실패 2</td><td>Qwen2.5 1.5B · 1차</td><td>대화 형식과 실행 파일 지원은 좋았지만 시험 9건 중 4건(44%)이 영어나 중국어였습니다. 대화 622개로 학습한 뒤에도 원래 모델이 쓰던 영어·중국어 답이 계속 나왔습니다.</td></tr>
+<tr><td>실패 3</td><td>Qwen2.5 1.5B · 2차</td><td>게임 밖 질문을 거절하는 데이터와 한국어 지시를 더 넣었지만 외국어 응답이 그대로였습니다. 데이터로 풀리지 않는 문제로 보고 모델을 바꿨습니다.</td></tr>
+<tr><td>버그</td><td>학습할 글자 0개</td><td>응답 시작 표시를 "마타이오스: "처럼 끝에 공백을 붙여 넘기자, 문장 안에서는 공백이 다음 글자와 합쳐져 표시를 찾지 못했습니다. 오류 없이 모든 정답 칸이 비워져 학습이 사실상 비어 있었습니다. 공백을 빼고, 글자 번호 목록으로 넘기고, 정답 칸이 비었는지 확인하는 단계를 추가해 고쳤습니다.</td></tr>
+</tbody></table>
+<div class="cp-figs one">
+<figure class="cp-fig wide"><img src="assets/ai-npc/selected_07_bpe_bug_result.png" alt="응답 시작 표시 끝 공백 때문에 매칭이 실패한 학습 기록 캡처" width="1555" height="550"><figcaption><b>버그 확인 기록</b>공백이 있으면 위치를 못 찾고(-1), 빼면 찾음(16)</figcaption></figure>
+</div>
+</div></details>
 
-    <section class="section fade" id="result">
-      <div class="section-head">
-        <h2>검증 결과</h2>
-        <p class="lead">
-          최종 페이지에서 가장 중요한 증거는 "모델을 써봤다"가 아니라, 실패 지표가 실제로 개선되었는지입니다.
-          아래 수치는 EXAONE 전환 후 공개 가능한 범위로 정리한 검증 결과입니다.
-          원본 데이터와 체크포인트를 공개하지 않고도 모델 선택, 학습, 평가 흐름을 확인할 수 있게 구성했습니다.
-        </p>
-      </div>
-      <div class="metric-grid">
-        <article class="metric-card">
-          <strong>25/26</strong>
-          <span>26턴 한국어 유지 판정</span>
-        </article>
-        <article class="metric-card">
-          <strong>20/20</strong>
-          <span>공개 평가표 행별 한국어 비율 100%</span>
-        </article>
-        <article class="metric-card">
-          <strong>14</strong>
-          <span>NPC 작업 유형 분포</span>
-        </article>
-        <article class="metric-card">
-          <strong>16.6</strong>
-          <span>평균 응답 길이</span>
-        </article>
-        <article class="metric-card">
-          <strong>697</strong>
-            <span>대화 학습 데이터</span>
-        </article>
-        <article class="metric-card">
-          <strong>0.0023</strong>
-            <span>최종 학습 손실 기록</span>
-        </article>
-      </div>
-      <div class="evidence-grid">
-        <figure class="evidence-card visual-proof full">
-          <img src="assets/ai-npc-colab-20260706/processed/digest_dataset_stats.png" alt="Mataios SFT dataset statistics digest" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>697개 학습 데이터 분포</strong>
-            <span>기분, 기억, 전투, 상점, 엔딩 상황을 나눠 캐릭터 규칙을 데이터로 만들었습니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card visual-proof">
-          <img src="assets/ai-npc-colab-20260706/processed/digest_korean_retention.png" alt="한국어 유지율 25/26 digest" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>한국어 유지율 검증</strong>
-            <span>한 번의 영어 누출을 숨기지 않고 25/26, 96%로 표기했습니다.</span>
-          </figcaption>
-        </figure>
-        <figure class="evidence-card visual-proof">
-          <img src="assets/ai-npc-colab-20260706/processed/digest_eval20_masked.png" alt="20문항 평가 결과 digest" loading="lazy" />
-          <figcaption class="evidence-caption">
-            <strong>평가셋 결과</strong>
-            <span>호감도, 스토리 단계, 기억 키워드, 게임 밖 질문을 섞어 캐릭터 응답을 확인했습니다.</span>
-          </figcaption>
-        </figure>
-      </div>
-      <p class="evidence-note">
-        수치 표기는 공개 캡처와 이전 검증 기록에 맞춰 보수적으로 정리했습니다.
-        이 페이지는 AI NPC 대화 모델을 학습시키고 Unity와 연결한 과정의 증빙입니다.
-        모바일 온디바이스 배포 완료나 본편 전투에 강화학습 모델을 직접 붙였다고 주장하지 않습니다.
-      </p>
-      <div class="grid-2" style="margin-top: 14px;">
-        <article class="card">
-          <span class="kicker">포트폴리오 가치</span>
-          <h3>게임 기획과 ML 엔지니어링을 연결한 사례</h3>
-          <p>
-            마타이오스의 말투, 기억, 세계관 차단은 게임 기획 요구사항입니다.
-            이 요구사항을 테스트셋, 데이터 증강, 모델 선택, Unity 연동 구조로 바꾼 것이 이 케이스의 핵심입니다.
-          </p>
-        </article>
-        <article class="card">
-          <span class="kicker">다음 작업</span>
-          <h3>런타임 캡처와 모바일 추론 검토</h3>
-          <p>
-            다음 단계는 같은 네트워크 FastAPI 서버를 붙인 실제 Unity 캡처를 확보하고,
-            MLC-LLM 또는 다른 모바일 추론 경로에서 EXAONE 계열 지원 가능성을 다시 검토하는 것입니다.
-          </p>
-        </article>
-      </div>
-    </section>
-  </main>
+<details class="cp-detail" id="model"><summary><div><b>모델을 고른 기준</b><span>후보 8개 비교표</span></div></summary>
+<div class="cp-body">
+<p>모델을 키우기보다 한국어를 먼저 배운 모델을 골랐습니다. 영어 중심 후보(Gemma 2B, LLaMA 3.2 1B·3B)는 한국어 사전 학습이 부족해서, Phi-3.5 Mini는 3B 목표를 넘어서 시험하지 않았습니다.</p>
+<div class="cp-figs one">
+<figure class="cp-fig wide"><img src="assets/ai-npc-colab-20260706/model_selection_table.png" alt="후보 모델 8개 비교표" width="2072" height="598"><figcaption><b>후보 모델 비교표</b>크기 · 1순위 언어 · 실행 파일 지원 · 한국어 비율 · 판정</figcaption></figure>
+</div>
+</div></details>
 
-  <footer class="footer">
-    <p>회귀자는 탑을 오른다 포트폴리오 · AI NPC 대화 모델 파인튜닝 사례이며, 정식 출시를 주장하지 않습니다.</p>
-  </footer>
+<details class="cp-detail" id="training"><summary><div><b>학습 설정과 데이터</b><span>QLoRA r=32 · α=64 · 대화 697개</span></div></summary>
+<div class="cp-body">
+<table class="cp-table"><tbody>
+<tr><td>모델</td><td>EXAONE 3.5 2.4B Instruct</td></tr>
+<tr><td>학습 방식</td><td>QLoRA(모델을 압축해 올리고 일부만 고치는 방식) · r=32 · alpha=64</td></tr>
+<tr><td>환경</td><td>Colab A100 · transformers 4.46.3 · 모델 버전 8e6fc27로 고정</td></tr>
+<tr><td>학습 손실</td><td>0.69에서 시작해 마지막 기록 0.0023 (약 820걸음)</td></tr>
+<tr><td>데이터</td><td>대화 622개에서 697개로 추가. 게임 밖 질문 거절, 높은 호감도 반응, 정체 혼란 대화를 보강</td></tr>
+<tr><td>데이터 분포</td><td>상황 14종 · 호감도별 적대 142 · 냉담 78 · 보통 211 · 호의 141 · 열림 125 · 평균 답 길이 16.6자</td></tr>
+</tbody></table>
+<div class="cp-figs one">
+<figure class="cp-fig wide"><img src="assets/ai-npc-colab-20260706/dataset_stats_697.png" alt="학습 대화 697개의 상황별, 호감도별, 답 길이 분포 그래프" width="1790" height="515"><figcaption><b>학습 데이터 분포</b>상황 14종 · 호감도 5단계 · 답 길이</figcaption></figure>
+</div>
+<div class="cp-figs one npc-narrow" style="margin-top:18px;max-width:720px">
+<figure class="cp-fig wide"><img src="assets/ai-npc-colab-20260706/loss_curve_exaone_q_lora.png" alt="EXAONE QLoRA 학습 손실 그래프" width="989" height="390"><figcaption><b>학습 손실 그래프</b>걸음이 늘수록 손실이 0 가까이 내려감</figcaption></figure>
+</div>
+</div></details>
 
-  <script>
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("visible");
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
+<details class="cp-detail" id="eval"><summary><div><b>시험 결과 원본</b><span>26턴 대화 · 평가 20건 · 게임 밖 질문 · 응답 시간</span></div></summary>
+<div class="cp-body">
+<p>26턴 시험은 호감도를 바꿔 가며 정체, 기분, 기억 키워드, 게임 밖 질문을 섞었습니다. 평가 20건은 호감도·스토리 단계·기억 키워드를 칸별로 정해 두고 돌렸고, 20건 모두 답이 한국어였습니다.</p>
+<div class="cp-figs two">
+<figure class="cp-fig wide"><img src="assets/ai-npc/selected_04_korean_retention_table.png" alt="26턴 한국어 유지 개별 판정표" width="1555" height="1090"><figcaption><b>26턴 개별 판정</b>한 턴이 영어로 새어 실패로 표시</figcaption></figure>
+<figure class="cp-fig wide"><img src="assets/ai-npc-colab-20260706/eval20_masked_table.png" alt="평가 20건 실행 결과표" width="2260" height="970"><figcaption><b>평가 20건 결과</b>칸별 호감도·스토리 단계·응답 시간</figcaption></figure>
+<figure class="cp-fig wide"><img src="assets/ai-npc/selected_10_biw_blocking_result.png" alt="게임 밖 질문 차단 시험 결과" width="833" height="400"><figcaption><b>게임 밖 질문 시험</b>5개 중 4개 차단, 주식 질문 1개 실패</figcaption></figure>
+<figure class="cp-fig wide"><img src="assets/ai-npc/selected_09_latency_result_card.png" alt="응답 시간 측정 결과" width="1631" height="602"><figcaption><b>응답 시간</b>5가지 질문 · 3번 반복 · Colab GPU 기준 평균 347ms</figcaption></figure>
+</div>
+</div></details>
 
-    document.querySelectorAll(".fade").forEach((el) => observer.observe(el));
-  </script>
-</body>
-</html>
+<details class="cp-detail" id="runtime"><summary><div><b>게임과 연결한 구조</b><span>Unity → 대화 서버 → 학습한 모델</span></div></summary>
+<div class="cp-body">
+<p>EXAONE을 실행용 파일(GGUF)로 바꿔 Ollama로 돌리는 길은 안정적이지 않았습니다. 그래서 학습한 모델을 Python 서버(FastAPI + transformers)에 올리고 Unity가 HTTP로 대화를 요청하게 했습니다.</p>
+<div class="cp-grid2">
+<div class="cp-card"><span class="k">게임</span><h4>Unity 대화 요청</h4><p>MataiosDialogueClient가 대화 요청을 보냅니다. 게임 쪽은 언어 모델 연결부를 따로 나눠 두고, 서버가 없을 때 쓸 규칙 응답을 유지합니다.</p></div>
+<div class="cp-card"><span class="k">서버</span><h4>학습한 모델 실행</h4><p>학습 결과를 합친 fp16 EXAONE 모델을 올리고 CUDA·MPS·CPU 환경에 맞춰 답을 만듭니다. 요청 주소는 대화(/chat), 원문(/raw), 상태 확인(/health) 세 가지입니다.</p></div>
+</div>
+</div></details>
+
+<details class="cp-detail" id="limits"><summary><div><b>하지 않은 것과 다음 할 일</b><span>주장하지 않는 범위</span></div></summary>
+<div class="cp-body">
+<table class="cp-table"><tbody>
+<tr><td>배포</td><td>폰 안에서 EXAONE을 돌리는 배포는 하지 않았습니다. 응답 시간도 Colab GPU 서버에서 잰 값입니다.</td></tr>
+<tr><td>전투</td><td>전투 중 마타이오스 행동은 사람이 짠 규칙으로 움직입니다. 강화학습 모델이나 이 대화 모델을 본편 전투에 연결하지 않았습니다.</td></tr>
+<tr><td>공개 범위</td><td>원본 학습 데이터와 학습 결과 파일은 공개하지 않았고, 시험 결과 캡처만 공개했습니다.</td></tr>
+<tr><td>다음 할 일</td><td>같은 네트워크의 대화 서버를 붙인 실제 Unity 화면을 캡처하고, MLC-LLM 같은 폰 실행 방법이 EXAONE 계열을 지원하는지 다시 확인합니다.</td></tr>
+</tbody></table>
+</div></details>
+</section>
+
+<footer class="cp-foot"><a href="../../../" data-portfolio-back="07-hwigi-tower">← 작품 모음으로</a><a href="hwigi-tower-steam-portfolio.html">회귀자는 탑을 오른다 게임 페이지</a><a href="mailto:ljhljh0703@gmail.com">ljhljh0703@gmail.com</a><span>동료 대화 학습 케이스 · 이주형</span></footer>
+</main>
+
+<dialog class="easy" id="easy" aria-labelledby="easy-title">
+<div class="easy-scraps" aria-hidden="true"><span class="ez-hex h1"></span><span class="ez-hex h2"></span><span class="ez-hex h3"></span><img class="ez-tape t1" src="case/tape.webp" alt=""><img class="ez-tape t2" src="case/tape.webp" alt=""></div>
+<div class="easy-top"><button type="button" class="easy-close" data-easy-close>원래대로 읽기</button><span class="easy-who">이주형 · 동료 대화 학습 케이스</span></div>
+<header class="easy-head">
+<div>
+<h2 id="easy-title" class="ez-h"><span class="ez-strip">외국어로 새던</span><br><span class="ez-strip">동료의 말을</span><span class="ez-strip accent">한국어로</span></h2>
+<p class="ez-lede">게임 속 동료 마타이오스의 대화를 작은 한국어 모델로 학습시켰습니다. 처음 모델은 영어·중국어로 답이 새서, 한국어를 먼저 배운 모델로 바꿨습니다.</p>
+<div class="ez-play"><a class="ez-btn main" href="hwigi-tower-steam-portfolio.html">게임 페이지로</a><a class="ez-btn" href="https://drive.google.com/drive/folders/1GSTXDCrkHHI-TVfRA-hYQs7hh3PtnTZG?usp=drive_link" target="_blank" rel="noopener noreferrer">APK 받기</a></div>
+</div>
+<figure class="ez-obj"><img src="case/sticker-tower.webp" alt="" width="651" height="720"></figure>
+</header>
+<div class="ez-grid">
+<section class="ez-card wide" style="--tilt:-.6deg"><span class="ez-tag">01 동료의 말은 이렇게</span>
+<ol class="ez-flow"><li>캐릭터 규칙</li><li>대화 697개</li><li class="mine">모델 학습<b>QLoRA</b></li><li>시험과 게임 연결</li></ol>
+<p class="ez-small">호감도 5단계 · 상황 14종 · EXAONE 3.5 2.4B</p></section>
+<section class="ez-card kraft" style="--tilt:.8deg"><span class="ez-tag">02 바꾼 것</span>
+<p class="ez-old">데이터를 더 넣어 외국어 막기</p><p class="ez-down" aria-hidden="true">↓</p>
+<p class="ez-new">한국어를 먼저 배운 모델로 바꾸기</p>
+<p class="ez-small">Qwen2.5에 데이터를 더 넣어도 외국어 응답이 그대로였습니다.</p></section>
+<section class="ez-card accent" style="--tilt:-.9deg"><span class="ez-tag">03 내가 맡은 것</span>
+<ul class="ez-list"><li>캐릭터 대화 규칙 설계</li><li>학습 데이터 구성</li><li>모델 비교와 학습</li><li>시험 설계와 Unity 연결</li></ul></section>
+<section class="ez-card wide" style="--tilt:.4deg"><span class="ez-tag">04 결과</span><span class="ez-stamp">25/26</span>
+<p class="ez-band">외국어 응답 9건 중 4건 → 26턴 중 <b>1건</b></p>
+<div class="ez-dots" role="img" aria-label="Qwen2.5는 9건 중 4건, EXAONE은 26턴 중 1건이 외국어">
+<div><span>Qwen2.5 1.5B · 9건</span><div class="ez-d"><i></i><i class="x"></i><i></i><i class="x"></i><i></i><i class="x"></i><i></i><i class="x"></i><i></i></div></div>
+<div><span>EXAONE 3.5 2.4B · 26턴</span><div class="ez-d"><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+</div>
+<p class="ez-small">진한 점이 외국어 응답 · 두 시험은 질문 묶음이 다름 · 평가 20건은 모두 한국어</p></section>
+<section class="ez-card wide ez-row" style="--tilt:-.5deg"><span class="ez-tag">05 호감도마다 다른 말투</span>
+<div class="ez-evo"><img src="case/sticker-mataios.webp" alt="마타이오스" width="64" height="148" style="height:120px;width:auto"></div>
+<p>적대 "닥쳐." · 보통 "멀쩡해. 너나 확인해." · 호의 "고맙다는 말은 무거워. 하지만 듣기 싫진 않아." · 열림 "같이라는 말에 기대고 싶어."</p></section>
+</div>
+<div class="easy-foot"><p>실패 기록, 학습 설정, 시험 결과 원본은 원래 페이지에 있습니다.</p><button type="button" class="ez-btn" data-easy-close>원래대로 읽기</button><a class="ez-btn" href="hwigi-tower-steam-portfolio.html">게임 페이지로</a></div>
+</dialog>
+<script src="case/case-easy.js"></script>
+</body></html>
