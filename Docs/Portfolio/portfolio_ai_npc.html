@@ -34,8 +34,9 @@
 <p class="cp-kicker"><b>회귀자는 탑을 오른다 · 동료 대화 학습</b>작은 언어 모델 학습 실험 · 1인 개발</p>
 <h1 class="cp-h1">외국어로 새던 동료의 말을<br><b>26턴 중 25턴</b> 한국어로</h1>
 <p class="cp-lead">게임 속 동료 마타이오스가 호감도와 기억에 따라 다른 말투로 답하도록 작은 언어 모델을 학습시켰습니다. 처음 고른 모델은 영어·중국어로 답이 샜고, 데이터를 더 넣어도 그대로여서 한국어를 1순위로 배운 모델로 바꿨습니다.</p>
-<p class="cp-result"><strong>외국어 응답 9건 중 4건 → 26턴 중 1건</strong><span>Qwen2.5 1.5B 9건 시험 · EXAONE 3.5 2.4B 26턴 대화 시험 · 시험 묶음이 서로 다름</span></p>
+<p class="cp-result"><strong>외국어 응답: 앞 모델 시험 9건 중 4건 → 바꾼 모델 대화 26턴 중 1건</strong><span>Qwen2.5 1.5B → EXAONE 3.5 2.4B · 질문 묶음이 다른 두 시험 · 같은 질문 4개를 두 모델에 넣은 기록은 외국어 4건 → 0건</span></p>
 <p class="cp-mine"><span>내 담당</span>캐릭터 대화 규칙 설계 · 학습 데이터 구성 · 모델 비교와 학습 · 평가 시험 설계 · Unity 연결 구조</p>
+<dl class="cp-who two"><div><dt>내가 정한 것</dt><dd>호감도 5단계 말투, 게임 밖 질문에 선 긋기, 한국어 반말 규칙 · 데이터를 늘리는 대신 EXAONE으로 모델 교체</dd></div><div><dt>내가 확인한 것</dt><dd>26턴 대화의 턴별 한국어 판정과 게임 밖 질문 5개 차단 여부 · 학습할 글자가 0개가 되는 버그</dd></div></dl>
 <p class="cp-meta"><b>이주형</b>EXAONE 3.5 2.4B · QLoRA · FastAPI · Unity 6 · 학습 실험(폰 안에서 돌리는 배포 아님)</p>
 <div class="cp-actions">
 <button type="button" class="easy-hero" data-easy-open aria-haspopup="dialog" aria-controls="easy"><span class="easy-hero-k">처음이라면</span>카드 5장으로 쉽게 읽기</button>
@@ -211,7 +212,7 @@
 <section class="ez-card accent" style="--tilt:-.9deg"><span class="ez-tag">03 내가 맡은 것</span>
 <ul class="ez-list"><li>캐릭터 대화 규칙 설계</li><li>학습 데이터 구성</li><li>모델 비교와 학습</li><li>시험 설계와 Unity 연결</li></ul></section>
 <section class="ez-card wide" style="--tilt:.4deg"><span class="ez-tag">04 결과</span><span class="ez-stamp">25/26</span>
-<p class="ez-band">외국어 응답 9건 중 4건 → 26턴 중 <b>1건</b></p>
+<p class="ez-band">외국어 응답 Qwen2.5 시험 9건 중 4건 → EXAONE 대화 26턴 중 <b>1건</b></p>
 <div class="ez-dots" role="img" aria-label="Qwen2.5는 9건 중 4건, EXAONE은 26턴 중 1건이 외국어">
 <div><span>Qwen2.5 1.5B · 9건</span><div class="ez-d"><i></i><i class="x"></i><i></i><i class="x"></i><i></i><i class="x"></i><i></i><i class="x"></i><i></i></div></div>
 <div><span>EXAONE 3.5 2.4B · 26턴</span><div class="ez-d"><i></i><i></i><i></i><i></i><i class="x"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
